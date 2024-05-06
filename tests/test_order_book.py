@@ -123,9 +123,11 @@ def test_partial_buy_limit_execution():
     assert transaction[0] == {'buyer_id': 'agent1', 'seller_id': 'agent2', 'price': 101.0, 'quantity': 5}
     assert transaction[1] == {'buyer_id': 'agent1', 'seller_id': 'agent3', 'price': 102.0, 'quantity': 5}
     assert len(ob.bid) == 1
-    assert ob.bid[0] == Order('agent1', MarketAction.BUY_LIMIT, 102.0, 2)
+    assert ob.bid[0].price == 102.0
+    assert ob.bid[0].quantity == 2
     assert len(ob.ask) == 1
-    assert ob.ask[0] == Order('agent4', MarketAction.SELL_LIMIT, 102.5, 1)
+    assert ob.ask[0].price == 102.5
+    assert ob.ask[0].quantity == 1
 
 
 def test_partial_sell_market_execution():
@@ -156,4 +158,8 @@ def test_partial_sell_limit_execution():
     assert transaction[0] == {'buyer_id': 'agent2', 'seller_id': 'agent1', 'price': 102.0, 'quantity': 5}
     assert transaction[1] == {'buyer_id': 'agent3', 'seller_id': 'agent1', 'price': 101.5, 'quantity': 5}
     assert len(ob.ask) == 1
+    assert ob.ask[0].price == 101.5
+    assert ob.ask[0].quantity == 2
     assert len(ob.bid) == 1
+    assert ob.bid[0].price == 101.0
+    assert ob.bid[0].quantity == 1

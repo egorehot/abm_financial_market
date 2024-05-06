@@ -1,6 +1,6 @@
 from bisect import insort_right
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from numbers import Real
 from operator import attrgetter
 import time
@@ -12,9 +12,9 @@ from models import MarketAction
 class Order:
     agent_id: int | str
     type: MarketAction
-    ts: time.time
     price: Real
     quantity: int
+    ts: float = field(default_factory=time.time)
 
 
 class OrderBook:
@@ -59,8 +59,8 @@ class OrderBook:
     def _add_market(self, order: Order):
         self.__market_orders.append(order)
 
-    def place_order(self, agent_id: int | str, action: MarketAction, price: Real, amount: int):
-        order = Order(agent_id=agent_id, type=action, price=price, quantity=amount, ts=time.time())
+    def place_order(self, agent_id: int | str, action: MarketAction, price: Real, quantity: int):
+        order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:
                 self._add_market(order)

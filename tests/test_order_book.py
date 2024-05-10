@@ -1,6 +1,6 @@
 import pytest
-from order_book import OrderBook, Order
-from models import MarketAction
+from utils.order_book import OrderBook, Order
+from utils.models import MarketAction
 
 
 @pytest.fixture

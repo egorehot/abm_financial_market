@@ -1,18 +1,17 @@
 from bisect import insort_right
 from collections import deque
 from dataclasses import dataclass, field
-from numbers import Real
 from operator import attrgetter
 import time
 
-from models import MarketAction
+from utils.models import MarketAction, Transaction
 
 
 @dataclass
 class Order:
     agent_id: int | str
     type: MarketAction
-    price: Real
+    price: float
     quantity: int
     ts: float = field(default_factory=time.time)
 
@@ -46,8 +45,8 @@ class OrderBook:
         if len(self.bid) == 0: return
         return self.bid[0]
 
-    def get_mu_spread(self) -> Real | None:
-        if not all([self.get_best_ask().price, self.get_best_bid().price]): return
+    def get_mu_spread(self) -> float | None:
+        if not all([self.get_best_ask(), self.get_best_bid()]): return
         return 0.5 * (self.get_best_ask().price + self.get_best_bid().price)
 
     def _add_ask(self, order: Order):
@@ -59,7 +58,7 @@ class OrderBook:
     def _add_market(self, order: Order):
         self.__market_orders.append(order)
 
-    def place_order(self, agent_id: int | str, action: MarketAction, price: Real, quantity: int):
+    def place_order(self, agent_id: int | str, action: MarketAction, price: float, quantity: int):
         order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:
@@ -75,24 +74,25 @@ class OrderBook:
                                  f"Expected MarketAction one from `{', '.join(MarketAction.__members__.keys())}`.")
 
     @staticmethod
-    def __make_transaction(order: Order, matched: Order) -> dict:
+    def __make_transaction(order: Order, matched: Order) -> Transaction:
         trade_qty = min(order.quantity, matched.quantity)
         if abs(order.type.value) == 1:
             trade_price = order.price if order.ts < matched.ts else matched.price
         else:
             trade_price = matched.price
-        transaction = {
-            'buyer_id': order.agent_id if order.type.value > 0 else matched.agent_id,
-            'seller_id': matched.agent_id if matched.type.value < 0 else order.agent_id,
-            'price': trade_price,
-            'quantity': trade_qty
-        }
+        transaction = Transaction(
+            buyer_id=order.agent_id if order.type.value > 0 else matched.agent_id,
+            seller_id=matched.agent_id if matched.type.value < 0 else order.agent_id,
+            price=trade_price,
+            quantity= trade_qty,
+        )
         order.quantity -= trade_qty
         matched.quantity -= trade_qty
         return transaction
 
-    def __execute_market_order(self, order: Order) -> list[dict | None]:
-        assert abs(order.type.value) == 2  # BUY or SELL
+    def __execute_market_order(self, order: Order) -> list[Transaction | None]:
+        if not abs(order.type.value) == 2:
+            raise ValueError(f"Expected Order.type BUY or SELL, got {order.type}")
         transactions = []
 
         opposite = self.__ask if order.type == MarketAction.BUY else self.__bid
@@ -105,7 +105,7 @@ class OrderBook:
         return transactions
 
 
-    def execute_orders(self) -> list[dict | None]:
+    def execute_orders(self) -> list[Transaction | None]:
         transactions = []
         while self.__market_orders:
             market_order = self.__market_orders.popleft()

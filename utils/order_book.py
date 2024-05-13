@@ -21,6 +21,8 @@ class OrderBook:
         self.__bid: list[Order | None] = []
         self.__ask: list[Order | None] = []
         self.__market_orders: deque[Order | None] = deque([])
+        self._mm_bid: bool = False
+        self._mm_ask: bool = False
 
     def __len__(self):
         return len(self.__bid) + len(self.__ask)
@@ -45,7 +47,7 @@ class OrderBook:
         if len(self.bid) == 0: return
         return self.bid[0]
 
-    def get_mu_spread(self) -> float | None:
+    def get_central_price(self) -> float | None:
         if not all([self.get_best_ask(), self.get_best_bid()]): return
         return 0.5 * (self.get_best_ask().price + self.get_best_bid().price)
 
@@ -58,20 +60,43 @@ class OrderBook:
     def _add_market(self, order: Order):
         self.__market_orders.append(order)
 
-    def place_order(self, agent_id: int | str, action: MarketAction, price: float, quantity: int):
+    def place_order(self, agent_id: int, action: MarketAction, price: float, quantity: int):
         order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:
                 self._add_market(order)
             case MarketAction.BUY_LIMIT:
                 self._add_bid(order)
+                if agent_id == 1:
+                    self._mm_bid = True
             case MarketAction.SELL_LIMIT:
                 self._add_ask(order)
+                if agent_id == 1:
+                    self._mm_ask = True
             case MarketAction.ABSTAIN:
                 pass
             case _:
                 raise ValueError(f"Invalid action '{action}'. "
                                  f"Expected MarketAction one from `{', '.join(MarketAction.__members__.keys())}`.")
+
+    def cancel_limit_orders(self, agent_id: int, side: str = 'both'):
+        match side:
+            case 'both':
+                self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
+                self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
+                if agent_id == 1:
+                    self._mm_bid = False
+                    self._mm_ask = False
+            case 'bid':
+                self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
+                if agent_id == 1:
+                    self._mm_bid = False
+            case 'ask':
+                self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
+                if agent_id == 1:
+                    self._mm_ask = False
+            case _:
+                raise ValueError(f'Wrong `side`. Expected both, ask or bid. Got {str(side)}.')
 
     @staticmethod
     def __make_transaction(order: Order, matched: Order) -> Transaction:
@@ -84,7 +109,7 @@ class OrderBook:
             buyer_id=order.agent_id if order.type.value > 0 else matched.agent_id,
             seller_id=matched.agent_id if matched.type.value < 0 else order.agent_id,
             price=trade_price,
-            quantity= trade_qty,
+            quantity=trade_qty,
         )
         order.quantity -= trade_qty
         matched.quantity -= trade_qty

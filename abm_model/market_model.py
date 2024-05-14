@@ -83,6 +83,7 @@ class MarketModel(Model):
                 'Chartists total assets': partial(get_type_attr, agent_type=ChartistAgent, attr='assets_quantity'),
             },
             agent_reporters={
+                'Type': lambda a: type(a).__name__,
                 'Wealth': 'wealth',
                 'Is bankrupt': 'bankrupt',
                 'Fundamental prices': '_fundamental_price',

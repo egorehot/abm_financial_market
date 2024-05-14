@@ -19,9 +19,13 @@ class MarketScheduler(BaseScheduler):
         buyer = self.model.agents.select(filter_func=lambda a: a.unique_id == transaction.buyer_id)[0]
         seller = self.model.agents.select(filter_func=lambda a: a.unique_id == transaction.seller_id)[0]
 
+        if isinstance(buyer, ChartistAgent):
+            buyer.update_open_pos_price('buy', transaction.price, transaction.quantity)
         buyer.cash -= transaction.price * transaction.quantity
         buyer.assets_quantity += transaction.quantity
 
+        if isinstance(seller, ChartistAgent):
+            seller.update_open_pos_price('sell', transaction.price, transaction.quantity)
         seller.cash += transaction.price * transaction.quantity
         seller.assets_quantity -= transaction.quantity
 

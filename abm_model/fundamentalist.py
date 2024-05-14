@@ -16,7 +16,7 @@ class FundamentalistAgent(MarketAgent):
     cash_distr: list[float] = [1., 0.4]
     cash_scale: float = 1000.
     eps_variance: float = 0.05
-    lambda_limit: float = 3.
+    lambda_limit: float = 3.5
     chi_market_range: list[float] = [0.01, 0.1]
     chi_opinion_range: list[float] = [0.03, 0.1]
     fundamental_price_spread: float = 0.03
@@ -70,10 +70,14 @@ class FundamentalistAgent(MarketAgent):
         if current_price <= 0: return 0
         if intention.value > 0:
             order_qty = min(self.wealth * self.__order_amount_perc, self.cash) // current_price
+            if order_qty == 0 and self.cash >= current_price:
+                order_qty = 1
             order_qty += abs(self.assets_quantity) if self.assets_quantity < 0 else 0
         elif intention.value < 0:
             free_cash = (self.wealth - self._cash_reserved) * 0.95
             order_qty = min(self.wealth * self.__order_amount_perc, free_cash) // current_price
+            if order_qty == 0 and free_cash >= current_price:
+                order_qty = 1
             order_qty += self.assets_quantity if self.assets_quantity > 0 else 0
         else:
             raise ValueError(f'Wrong `MarketAction`. Got {intention}')

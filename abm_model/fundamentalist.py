@@ -19,7 +19,7 @@ class FundamentalistAgent(MarketAgent):
     lambda_limit: float = 3.
     chi_market_range: list[float] = [0.01, 0.1]
     chi_opinion_range: list[float] = [0.03, 0.1]
-    fundamental_price_spread: float = 0.05
+    fundamental_price_spread: float = 0.03
     order_amount_range: list[float] = [0.05, 0.10]
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
@@ -80,27 +80,29 @@ class FundamentalistAgent(MarketAgent):
         return max(int(order_qty), 0)
 
     def _intention(self) -> MarketAction:
-        fundamental_price = self._calc_fundamental_price()
-
+        fundamental_price = self._fundamental_price
         order_book: OrderBook = self.model.order_book
-        best_ask = order_book.get_best_ask().price
-        best_bid = order_book.get_best_bid().price
-        if fundamental_price > best_ask * (1 + self._chi_market):
+        best_ask = order_book.get_best_ask()
+        best_bid = order_book.get_best_bid()
+        if fundamental_price > best_ask.price * (1 + self._chi_market):
             return MarketAction.BUY
-        elif best_ask < fundamental_price <= best_ask * (1 + self._chi_market):
+        elif best_ask.price < fundamental_price <= best_ask.price * (1 + self._chi_market):
             return MarketAction.BUY_LIMIT
-        elif fundamental_price < best_bid * (1 - self._chi_market):
+        elif fundamental_price < best_bid.price * (1 - self._chi_market):
             return MarketAction.SELL
-        elif best_bid * (1 - self._chi_market) <= fundamental_price < best_bid:
+        elif best_bid.price * (1 - self._chi_market) <= fundamental_price < best_bid.price:
             return MarketAction.SELL_LIMIT
         else:
             return MarketAction.ABSTAIN
 
     def step(self):
+        fundamental_price = self._calc_fundamental_price()
         order_book: OrderBook = self.model.order_book
-        intention = self._intention()
-        cancel_side = 'ask' if intention.value > 0 else 'bid'
+
+        cancel_side = 'ask' if fundamental_price > order_book.get_central_price() else 'bid'
         order_book.cancel_limit_orders(self.unique_id, cancel_side)
+
+        intention = self._intention()
         match intention:
             case MarketAction.BUY | MarketAction.SELL:
                 order_quantity = self._calc_order_quantity(intention)

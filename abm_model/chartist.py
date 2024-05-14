@@ -90,7 +90,7 @@ class ChartistAgent(MarketAgent):
         best_bid_price = order_book.get_best_bid().price
         best_ask_price = order_book.get_best_ask().price
         if self.assets_quantity < 0 and self.is_optimistic:
-            order_book.place_order(self.unique_id, MarketAction.BUY, best_ask_price, self.assets_quantity)
+            order_book.place_order(self.unique_id, MarketAction.BUY, best_ask_price, abs(self.assets_quantity))
             self.__avg_opened_price = 0
             return
         elif self.assets_quantity < 0:

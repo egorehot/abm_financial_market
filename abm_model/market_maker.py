@@ -66,12 +66,11 @@ class MarketMaker(MarketAgent):
             order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, order_price,
                                    self._inventory_min - self.assets_quantity + 1)
         else:
-            pass  # TODO
-            # best_ask = order_book.get_best_ask()
-            # best_bid = order_book.get_best_bid()
-            # if best_ask and current_price * (1 + self._base_spread / 2) >= best_ask.price:
-            #     order_book.place_order(self.unique_id, MarketAction.BUY, best_ask.price, best_ask.quantity)
-            # if best_bid and current_price * (1 - self._base_spread / 2) <= best_bid.price:
-            #     order_book.place_order(self.unique_id, MarketAction.SELL, best_bid.price, best_bid.quantity)
+            best_ask = order_book.get_best_ask()
+            best_bid = order_book.get_best_bid()
+            if best_ask and current_price * (1 + self._base_spread / 2) >= best_ask.price:
+                order_book.place_order(self.unique_id, MarketAction.BUY, best_ask.price, best_ask.quantity)
+            if best_bid and current_price * (1 - self._base_spread / 2) <= best_bid.price:
+                order_book.place_order(self.unique_id, MarketAction.SELL, best_bid.price, best_bid.quantity)
         self.fill_order_book()
         self.model.prices.append(round(order_book.get_central_price(), self.model.tick_size))

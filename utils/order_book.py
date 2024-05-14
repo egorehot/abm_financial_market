@@ -61,6 +61,8 @@ class OrderBook:
         self.__market_orders.append(order)
 
     def place_order(self, agent_id: int, action: MarketAction, price: float, quantity: int):
+        if quantity <= 0:
+            raise ValueError(f"Order quantity have to be > 0, got {str(quantity)}.")
         order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:

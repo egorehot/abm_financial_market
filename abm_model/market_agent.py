@@ -6,6 +6,7 @@ class MarketAgent(Agent):
         super().__init__(unique_id=unique_id, model=model)
         self._cash = float(cash)
         self._assets_quantity = int(assets_quantity) if assets_quantity else 0
+        self._cash_reserved = 0
 
     @property
     def cash(self):
@@ -21,6 +22,14 @@ class MarketAgent(Agent):
 
     @assets_quantity.setter
     def assets_quantity(self, value):
+        if value < 0 and self._assets_quantity <= 0:
+            short = self._assets_quantity - value
+            self._cash_reserved += self.model.prices[-1] * short
+        elif value < 0 < self._assets_quantity:
+            short = abs(value)
+            self._cash_reserved += self.model.prices[-1] * short
+        else:
+            self._cash_reserved = 0
         self._assets_quantity = value
 
     @property

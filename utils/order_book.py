@@ -124,7 +124,8 @@ class OrderBook:
         idx = 0
         while order.quantity > 0 and idx < len(opposite):
             best_match = opposite[idx]
-            transactions.append(self.__make_transaction(order, best_match))
+            if order.agent_id != best_match.agent_id:
+                transactions.append(self.__make_transaction(order, best_match))
             idx += 1
 
         return transactions

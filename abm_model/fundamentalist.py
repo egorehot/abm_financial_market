@@ -18,9 +18,9 @@ class FundamentalistAgent(MarketAgent):
     eps_variance: float = 0.05
     lambda_limit: float = 3.
     chi_market_range: list[float] = [0.01, 0.1]
-    chi_opinion_range: list[float] = [0.05, 0.15]
+    chi_opinion_range: list[float] = [0.03, 0.1]
     fundamental_price_spread: float = 0.05
-    risk_range: list[float] = [0.6, 4]
+    order_amount_range: list[float] = [0.05, 0.10]
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
@@ -32,7 +32,7 @@ class FundamentalistAgent(MarketAgent):
         )
         self._chi_market = np.random.uniform(*cls.chi_market_range)
         self._chi_opinion = np.random.uniform(*cls.chi_opinion_range)
-        self._risk_aversion = np.random.uniform(*cls.risk_range)
+        self.__order_amount_perc = np.random.uniform(*cls.order_amount_range)
 
     def _calc_fundamental_price(self) -> float:
         """
@@ -66,24 +66,18 @@ class FundamentalistAgent(MarketAgent):
         return round(np.random.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
 
     def _calc_order_quantity(self, intention: MarketAction, price: float | None = None) -> int:
-        """
-        Calcualtes order quantity based on exponential utility function.
-        U(W) = -exp^-{a * W}
-        W = E(returns) * Q - risk_aversion * volatility * Q^2
-        dU/dQ = 0
-        Q = returns / (2 * risk_aversion * volatility)
-        """
         current_price = price if price else self.model.order_book.get_central_price()
         if current_price <= 0: return 0
-
-        expected_return = (self._fundamental_price - current_price) / current_price
-        log_volatility = self.model.log_returns.var(ddof=1) if len(self.model.log_returns) > 2 else 0.007
-        optimal_quantity = abs(expected_return / (2 * self._risk_aversion * log_volatility))
         if intention.value > 0:
-            return int(min(optimal_quantity, self.cash // current_price))
+            order_qty = min(self.wealth * self.__order_amount_perc, self.cash) // current_price
+            order_qty += abs(self.assets_quantity) if self.assets_quantity < 0 else 0
         elif intention.value < 0:
-            return int(min(optimal_quantity, self.assets_quantity + self.cash // current_price))
-        return 0
+            free_cash = (self.wealth - self._cash_reserved) * 0.95
+            order_qty = min(self.wealth * self.__order_amount_perc, free_cash) // current_price
+            order_qty += self.assets_quantity if self.assets_quantity > 0 else 0
+        else:
+            raise ValueError(f'Wrong `MarketAction`. Got {intention}')
+        return max(int(order_qty), 0)
 
     def _intention(self) -> MarketAction:
         fundamental_price = self._calc_fundamental_price()
@@ -105,7 +99,9 @@ class FundamentalistAgent(MarketAgent):
     def step(self):
         order_book: OrderBook = self.model.order_book
         intention = self._intention()
-        match intention:  # TODO отменять противоположные ордеры
+        cancel_side = 'ask' if intention.value > 0 else 'bid'
+        order_book.cancel_limit_orders(self.unique_id, cancel_side)
+        match intention:
             case MarketAction.BUY | MarketAction.SELL:
                 order_quantity = self._calc_order_quantity(intention)
                 if order_quantity > 0:

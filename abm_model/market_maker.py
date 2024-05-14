@@ -38,8 +38,8 @@ class MarketMaker(MarketAgent):
         if len(order_book.bid) == 0 or not order_book._mm_bid:
             spread = self._max_spread if self.assets_quantity > self._inventory_max else self._base_spread
             order_price = round(self.model.prices[-1] * (1 - spread / 2), self.model.tick_size)
-            if self.cash * 0.5 > order_price:
-                order_qty = self.cash * 0.5 // order_price
+            if self.cash * 0.7 > order_price:
+                order_qty = self.cash * 0.7 // order_price
             else:
                 order_qty = self.cash // order_price
             order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, order_price, int(order_qty))
@@ -74,4 +74,4 @@ class MarketMaker(MarketAgent):
             # if best_bid and current_price * (1 - self._base_spread / 2) <= best_bid.price:
             #     order_book.place_order(self.unique_id, MarketAction.SELL, best_bid.price, best_bid.quantity)
         self.fill_order_book()
-        self.model.prices.append(order_book.get_central_price())
+        self.model.prices.append(round(order_book.get_central_price(), self.model.tick_size))

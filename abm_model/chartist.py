@@ -69,7 +69,8 @@ class ChartistAgent(MarketAgent):
         if intention.value > 0:
             order_qty = min(self.wealth * self.__order_amount_perc, self.cash) // current_price
         elif intention.value < 0:
-            order_qty = self.wealth * self.__order_amount_perc // current_price
+            free_cash = (self.wealth - self._cash_reserved) * 0.95
+            order_qty = min(self.wealth * self.__order_amount_perc, free_cash) // current_price
         else:
             raise ValueError(f'Wrong `MarketAction`. Got {intention}')
         return max(int(order_qty), 0)

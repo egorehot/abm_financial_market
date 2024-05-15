@@ -100,6 +100,8 @@ class FundamentalistAgent(MarketAgent):
             return MarketAction.ABSTAIN
 
     def step(self):
+        if self.bankrupt: return
+
         fundamental_price = self._calc_fundamental_price()
         order_book: OrderBook = self.model.order_book
 
@@ -119,4 +121,5 @@ class FundamentalistAgent(MarketAgent):
                     order_book.place_order(agent_id=self.unique_id, action=intention,
                                            price=limit_price, quantity=order_quantity)
             case _:
-                return
+                pass
+        return

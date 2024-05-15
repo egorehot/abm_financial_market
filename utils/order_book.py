@@ -132,7 +132,6 @@ class OrderBook:
 
         return transactions
 
-
     def execute_orders(self) -> list[Transaction | None]:
         transactions = []
         while self.__market_orders:

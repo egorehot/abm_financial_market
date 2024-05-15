@@ -1,4 +1,4 @@
-from mesa import Agent, Model
+from mesa import Model
 
 from abm_model.market_agent import MarketAgent
 from utils.models import MarketAction

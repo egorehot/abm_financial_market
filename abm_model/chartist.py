@@ -76,7 +76,7 @@ class ChartistAgent(MarketAgent):
             if order_qty == 0 and free_cash >= current_price:
                 order_qty = 1
         else:
-            raise ValueError(f'Wrong `MarketAction`. Got {intention}')
+            raise ValueError(f'Wrong `MarketAction`. Got {str(intention)}')
         return max(int(order_qty), 0)
 
     def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
@@ -113,7 +113,7 @@ class ChartistAgent(MarketAgent):
                     #             (self.assets_quantity - quantity))
                     pass
             case _:
-                raise ValueError(f'Wrong `action`. Expected buy or sell, got {str(action)}.')
+                raise ValueError(f'Wrong `action`. Expected "buy" or "sell", got {str(action)}.')
 
     def step(self):
         order_book: OrderBook = self.model.order_book

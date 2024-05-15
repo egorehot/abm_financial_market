@@ -1,5 +1,3 @@
-import math
-
 from mesa import Model
 import numpy as np
 
@@ -7,7 +5,7 @@ import config
 from abm_model.market_agent import MarketAgent
 from utils.order_book import MarketAction, OrderBook
 
-logger = config.get_logger(__name__)
+logger = config.get_logger(__name__, 10)
 
 logger.debug(f'Seed: {config.RANDOM_SEED}')
 RNG = np.random.default_rng(config.RANDOM_SEED)
@@ -20,11 +18,11 @@ class FundamentalistAgent(MarketAgent):
     """
     cash_distr: list[float] = [1., 0.4]
     cash_scale: float = 1000.
-    eps_variance: float = 0.05
     lambda_limit: float = 3.5
     chi_market_range: list[float] = [0.01, 0.1]
     chi_opinion_range: list[float] = [0.03, 0.1]
     fundamental_price_spread: float = 0.03
+    fundamental_price_variance: float = 0.2
     order_amount_range: list[float] = [0.05, 0.10]
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
@@ -43,10 +41,11 @@ class FundamentalistAgent(MarketAgent):
         """
         ln(p_t) - ln(p_{t-1}) = eps, where eps ~ N(0, eps_variance)
         """
-        cls = type(self)
-        eps_fundamental = RNG.normal(0, cls.eps_variance)
-        self._fundamental_price = self._fundamental_price * math.e**eps_fundamental
-        self._fundamental_price = self.__adjust_fundamental_price(self._fundamental_price)
+        if self.model.news_event_occurred:
+            cls = type(self)
+            self._fundamental_price += RNG.normal(self.model._news_event_value, cls.fundamental_price_variance)
+            self._fundamental_price = self.__adjust_fundamental_price(self._fundamental_price)
+            logger.debug(f'Agent: {self.unique_id}. New fundamental price: {round(self._fundamental_price, 3)}.')
         return self._fundamental_price
 
     def __adjust_fundamental_price(self, price: float) -> float:

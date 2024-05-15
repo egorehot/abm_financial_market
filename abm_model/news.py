@@ -11,7 +11,7 @@ RNG = np.random.default_rng(config.RANDOM_SEED)
 
 class NewsAgent(Agent):
     mean = 0
-    variance = 1
+    variance = 0.15
 
     def __init__(self, unique_id: int, model: Model, mean: float | None = None, variance: float | None = None):
         cls = type(self)

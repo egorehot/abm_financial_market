@@ -1,10 +1,8 @@
-import logging
-import random
 from functools import partial
 
 from mesa import Model, DataCollector, Agent
-import numpy as np
 
+import config
 from abm_model.chartist import ChartistAgent
 from abm_model.fundamentalist import FundamentalistAgent
 from abm_model.market_agent import MarketAgent
@@ -13,9 +11,7 @@ from abm_model.news import NewsAgent
 from abm_model.scheduler import MarketScheduler
 from utils.order_book import OrderBook
 
-
-logger = logging.getLogger('MARKET_MODEL')
-logger.setLevel(logging.INFO)
+logger = config.get_logger(__name__)
 
 
 def _agents_factory(model: Model, agent_type: type[Agent], agents_number: int, class_config: dict | None = None):
@@ -45,6 +41,7 @@ def get_type_attr_ttl(model: Model, agent_type: MarketAgent, attr: str):
 class MarketModel(Model):
     def __init__(
             self,
+            *,
             fundamentalists_number: int,
             chartists_number: int,
             steps_number: int,
@@ -53,7 +50,7 @@ class MarketModel(Model):
             fundamentalists_config: dict | None = None,
             chartists_config: dict | None = None,
     ):
-        logging.info('Initializing model.')
+        logger.info('Initializing model.')
         super().__init__()
         self.running = True
         if steps_number <= 0:
@@ -123,12 +120,8 @@ class MarketModel(Model):
         self.schedule.step()
         if self.schedule.steps == self.__steps_number:
             self.running = False
-        logger.debug(f'Step {self.schedule.steps} finished.')
 
-    def run_model(self, seed: int | None = None) -> None:
-        if seed:
-            random.seed(seed)
-            np.random.seed(seed)
+    def run_model(self) -> None:
         while self.running:
             self.step()
         self.datacollector.collect(self)

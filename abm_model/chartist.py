@@ -3,9 +3,16 @@ import math
 from mesa import Model
 import numpy as np
 
+import config
 from abm_model.market_agent import MarketAgent
 from utils.models import MarketAction
 from utils.order_book import OrderBook
+
+logger = config.get_logger(__name__)
+
+
+logger.debug(f'Seed: {config.RANDOM_SEED}')
+RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class ChartistAgent(MarketAgent):
@@ -25,12 +32,12 @@ class ChartistAgent(MarketAgent):
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
-        cash = np.random.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
+        cash = RNG.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
         super().__init__(unique_id=unique_id, model=model, cash=cash, assets_quantity=assets_quantity)
-        self.__is_optimistic = np.random.choice([True, False], p=[cls.optimistic_ratio, 1 - cls.optimistic_ratio])
-        self.take_profit = np.random.uniform(*cls.take_profit_range)
+        self.__is_optimistic = RNG.choice([True, False], p=[cls.optimistic_ratio, 1 - cls.optimistic_ratio])
+        self.take_profit = RNG.uniform(*cls.take_profit_range)
         self.__avg_opened_price = 0
-        self.__order_amount_perc = np.random.uniform(*cls.order_amount_range)
+        self.__order_amount_perc = RNG.uniform(*cls.order_amount_range)
 
         self.model._optimistic_chartists_number += int(self.__is_optimistic)
 
@@ -61,7 +68,7 @@ class ChartistAgent(MarketAgent):
         change_proba = (cls.revaluation_freq * chartists_number /
                         len(self.model.agents) * math.e**(self.__majority_opinion() * (1 if self.is_optimistic else -1)))
         change_proba = min(change_proba, 1.)
-        self.is_optimistic = np.random.choice([self.is_optimistic, not self.is_optimistic], p=[1 - change_proba, change_proba])
+        self.is_optimistic = RNG.choice([self.is_optimistic, not self.is_optimistic], p=[1 - change_proba, change_proba])
 
     def _calc_order_quantity(self, intention: MarketAction, price: float | None = None) -> int:
         current_price = price if price else self.model.order_book.get_central_price()
@@ -86,7 +93,7 @@ class ChartistAgent(MarketAgent):
         """
         cls = type(self)
         order_book: OrderBook = self.model.order_book if not order_book else order_book
-        return round(np.random.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
+        return round(RNG.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
 
     def update_open_pos_price(self, action: str, price: float, quantity: int):
         match action:

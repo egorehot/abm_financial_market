@@ -1,11 +1,16 @@
-import logging
 import math
 
 from mesa import Model
 import numpy as np
 
+import config
 from abm_model.market_agent import MarketAgent
 from utils.order_book import MarketAction, OrderBook
+
+logger = config.get_logger(__name__)
+
+logger.debug(f'Seed: {config.RANDOM_SEED}')
+RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class FundamentalistAgent(MarketAgent):
@@ -24,22 +29,22 @@ class FundamentalistAgent(MarketAgent):
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
-        cash = np.random.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
+        cash = RNG.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
         super().__init__(unique_id=unique_id, model=model, cash=cash, assets_quantity=assets_quantity)
-        self._fundamental_price = np.random.uniform(
+        self._fundamental_price = RNG.uniform(
             low=self.model.prices[-1] * (1 - cls.fundamental_price_spread),
             high=self.model.prices[-1] * (1 + cls.fundamental_price_spread),
         )
-        self._chi_market = np.random.uniform(*cls.chi_market_range)
-        self._chi_opinion = np.random.uniform(*cls.chi_opinion_range)
-        self.__order_amount_perc = np.random.uniform(*cls.order_amount_range)
+        self._chi_market = RNG.uniform(*cls.chi_market_range)
+        self._chi_opinion = RNG.uniform(*cls.chi_opinion_range)
+        self.__order_amount_perc = RNG.uniform(*cls.order_amount_range)
 
     def _calc_fundamental_price(self) -> float:
         """
         ln(p_t) - ln(p_{t-1}) = eps, where eps ~ N(0, eps_variance)
         """
         cls = type(self)
-        eps_fundamental = np.random.normal(0, cls.eps_variance)
+        eps_fundamental = RNG.normal(0, cls.eps_variance)
         self._fundamental_price = self._fundamental_price * math.e**eps_fundamental
         self._fundamental_price = self.__adjust_fundamental_price(self._fundamental_price)
         return self._fundamental_price
@@ -63,7 +68,7 @@ class FundamentalistAgent(MarketAgent):
         """
         cls = type(self)
         order_book: OrderBook = self.model.order_book if not order_book else order_book
-        return round(np.random.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
+        return round(RNG.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
 
     def _calc_order_quantity(self, intention: MarketAction, price: float | None = None) -> int:
         current_price = price if price else self.model.order_book.get_central_price()

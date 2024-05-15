@@ -1,10 +1,8 @@
-import random
-import logging
-
 from mesa import Model
 from mesa.time import BaseScheduler
 import numpy as np
 
+import config
 from abm_model.chartist import ChartistAgent
 from abm_model.fundamentalist import FundamentalistAgent
 from abm_model.market_maker import MarketMaker
@@ -12,7 +10,10 @@ from abm_model.news import NewsAgent
 from utils.models import Transaction
 from utils.order_book import OrderBook
 
-RNG = np.random.default_rng()
+logger = config.get_logger(__name__)
+
+logger.debug(f'Seed: {config.RANDOM_SEED}')
+RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class MarketScheduler(BaseScheduler):
@@ -21,7 +22,7 @@ class MarketScheduler(BaseScheduler):
     def __init__(self, model: Model):
         super().__init__(model)
         self._news_lambda = type(self).news_lambda
-        self.news_event_step = round(np.random.exponential(1 / self._news_lambda))
+        self.news_event_step = round(RNG.exponential(1 / self._news_lambda))
 
     def __complete_transaction(self, transaction: Transaction):
         buyer = self.model.agents.select(filter_func=lambda a: a.unique_id == transaction.buyer_id)[0]
@@ -51,24 +52,24 @@ class MarketScheduler(BaseScheduler):
             mm.fill_order_book()
 
     def __generate_news_event(self):
-        self.news_event_step = self.steps + np.ceil(np.random.exponential(1 / self._news_lambda))
+        self.news_event_step = self.steps + np.ceil(RNG.exponential(1 / self._news_lambda))
         for news_agent in self.model.get_agents_of_type(NewsAgent):
             news_agent.step()
 
     def step(self):
+        logger.debug(f'Step #{self.steps} starts.')
         self.model.completed_transactions = 0
         self.model.traded_qty = 0
 
         self.model.news_event_occurred = False
         if self.steps == self.news_event_step:
-            print(f'Step {self.steps}', end=' ')
             self.__generate_news_event()
 
         traders = []
         for agent_type in [ChartistAgent, FundamentalistAgent]:
             traders.extend(self.model.get_agents_of_type(agent_type))
 
-        random.shuffle(traders)
+        RNG.shuffle(traders)
         for trader in traders:
             self.__mm_fill_order_book()
             trader.step()
@@ -78,4 +79,5 @@ class MarketScheduler(BaseScheduler):
             mm.step()
             self.__execute_order_book()
 
+        logger.debug(f'Step #{self.steps} finished.')
         self.steps += 1

@@ -1,6 +1,13 @@
 from mesa import Agent, Model
 import numpy as np
 
+import config
+
+logger = config.get_logger(__name__, 10)
+
+logger.debug(f'Seed: {config.RANDOM_SEED}')
+RNG = np.random.default_rng(config.RANDOM_SEED)
+
 
 class NewsAgent(Agent):
     mean = 0
@@ -13,5 +20,5 @@ class NewsAgent(Agent):
         self._variance = variance or cls.variance
 
     def step(self):
-        self.model.news_event_value = np.random.normal(self._mean, self._variance)
-        print(f'News event {round(self.model.news_event_value, 4)}')
+        self.model.news_event_value = RNG.normal(self._mean, self._variance)
+        logger.debug(f'Step {self.model.schedule.steps + 1}. News event {round(self.model.news_event_value, 4)}')

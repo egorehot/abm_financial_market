@@ -51,6 +51,7 @@ class ChartistAgent(MarketAgent):
             self.model._optimistic_chartists_number += 1 if not self.__is_optimistic else -1
             side = 'bid' if self.__is_optimistic else 'ask'
             self.model.order_book.cancel_limit_orders(self.unique_id, side)
+            logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. Changing opinion.")
         self.__is_optimistic = value
 
     def __majority_opinion(self):
@@ -60,6 +61,8 @@ class ChartistAgent(MarketAgent):
         pessimists_number = chartists_number - optimists_number
         majority = (optimists_number - pessimists_number) / chartists_number
         price_trend = ((self.model.prices[-1] - self.model.prices[-2]) / self.model.prices[-2]) if len(self.model.prices) > 1 else 0.001
+        logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. "
+                     f"Majority: {round(majority, 3)}. Price trend: {round(price_trend, 3)}.")
         return cls.majority_importance * majority + cls.price_trend_importance * price_trend / cls.revaluation_freq
 
     def __evaluate_opinion(self):
@@ -68,22 +71,22 @@ class ChartistAgent(MarketAgent):
         change_proba = (cls.revaluation_freq * chartists_number /
                         len(self.model.agents) * math.e**(self.__majority_opinion() * (1 if self.is_optimistic else -1)))
         change_proba = min(change_proba, 1.)
+        logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. "
+                     f"Optimist: {self.is_optimistic}. Change proba: {round(change_proba, 4)}.")
         self.is_optimistic = RNG.choice([self.is_optimistic, not self.is_optimistic], p=[1 - change_proba, change_proba])
 
-    def _calc_order_quantity(self, intention: MarketAction, price: float | None = None) -> int:
+    def _calc_order_quantity(self, price: float | None = None) -> int:
         current_price = price if price else self.model.order_book.get_central_price()
         if current_price <= 0: return 0
-        if intention.value > 0:
+        if self.is_optimistic:
             order_qty = min(self.wealth * self.__order_amount_perc, self.cash) // current_price
             if order_qty == 0 and self.cash >= current_price:
                 order_qty = 1
-        elif intention.value < 0:
+        else:
             free_cash = (self.wealth - self._cash_reserved) * 0.95
             order_qty = min(self.wealth * self.__order_amount_perc, free_cash) // current_price
             if order_qty == 0 and free_cash >= current_price:
                 order_qty = 1
-        else:
-            raise ValueError(f'Wrong `MarketAction`. Got {str(intention)}')
         return max(int(order_qty), 0)
 
     def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
@@ -93,7 +96,8 @@ class ChartistAgent(MarketAgent):
         """
         cls = type(self)
         order_book: OrderBook = self.model.order_book if not order_book else order_book
-        return round(RNG.laplace(order_book.get_central_price(), 1 / cls.lambda_limit), self.model.tick_size)
+        price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
+        return round(RNG.laplace(price, 1 / cls.lambda_limit), self.model.tick_size)
 
     def update_open_pos_price(self, action: str, price: float, quantity: int):
         match action:
@@ -125,27 +129,27 @@ class ChartistAgent(MarketAgent):
     def step(self):
         order_book: OrderBook = self.model.order_book
         self.__evaluate_opinion()
-        best_bid_price = order_book.get_best_bid().price
-        best_ask_price = order_book.get_best_ask().price
-        if self.assets_quantity < 0 and self.is_optimistic:
-            order_book.place_order(self.unique_id, MarketAction.BUY, best_ask_price, abs(self.assets_quantity))
-            return
-        elif self.assets_quantity < 0 and self.__avg_opened_price * (1 - self.take_profit) >= best_ask_price:
-            order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, best_ask_price, abs(self.assets_quantity))
 
-        if self.assets_quantity > 0 and not self.is_optimistic:
-            order_book.place_order(self.unique_id, MarketAction.SELL, best_bid_price, self.assets_quantity)
+        best_ask = order_book.get_best_ask()
+        if self.assets_quantity < 0 and self.is_optimistic and best_ask:
+            order_book.place_order(self.unique_id, MarketAction.BUY, best_ask.price, abs(self.assets_quantity))
             return
-        elif self.assets_quantity > 0 and self.__avg_opened_price * (1 + self.take_profit) <= best_bid_price:
-            order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, best_bid_price, self.assets_quantity)
+        elif best_ask and self.assets_quantity < 0 and self.__avg_opened_price * (1 - self.take_profit) >= best_ask.price:
+            order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, best_ask.price, abs(self.assets_quantity))
+
+        best_bid = order_book.get_best_bid()
+        if self.assets_quantity > 0 and not self.is_optimistic and best_bid:
+            order_book.place_order(self.unique_id, MarketAction.SELL, best_bid.price, self.assets_quantity)
+            return
+        elif best_bid and self.assets_quantity > 0 and self.__avg_opened_price * (1 + self.take_profit) <= best_bid.price:
+            order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, best_bid.price, self.assets_quantity)
 
         if self.bankrupt: return
         order_price = self._calc_limit_price()
-        if self.is_optimistic:
-            order_quantity = self._calc_order_quantity(MarketAction.BUY_LIMIT, order_price)
-            if order_quantity > 0:
-                order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, order_price, order_quantity)
+        order_quantity = self._calc_order_quantity(order_price)
+        if order_quantity > 0 and self.is_optimistic:
+            order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, order_price, order_quantity)
+        elif order_quantity > 0 and not self.is_optimistic:
+            order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, order_price, order_quantity)
         else:
-            order_quantity = self._calc_order_quantity(MarketAction.SELL_LIMIT, order_price)
-            if order_quantity > 0:
-                order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, order_price, order_quantity)
+            pass

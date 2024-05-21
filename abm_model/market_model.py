@@ -35,7 +35,7 @@ def _agents_factory(model: Model, agent_type: type[Agent], agents_number: int, c
 
 
 def get_type_attr_ttl(model: Model, agent_type: MarketAgent, attr: str):
-    return sum(model.get_agents_of_type(agent_type).get(attr))
+    return round(sum(model.get_agents_of_type(agent_type).get(attr)), 2)
 
 
 class MarketModel(Model):
@@ -75,7 +75,8 @@ class MarketModel(Model):
                 'MM total wealth': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='wealth'),
                 'MM total cash': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='cash'),
                 'MM total assets': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='assets_quantity'),
-                'News occurred': 'news_event_occurred',
+                'Positive news occurred': lambda x: x.news_event_occurred and x._news_event_value > 0,
+                'Negative news occurred': lambda x: x.news_event_occurred and x._news_event_value < 0,
                 'Fundamentalists total wealth': partial(get_type_attr_ttl, agent_type=FundamentalistAgent, attr='wealth'),
                 'Fundamentalists total cash': partial(get_type_attr_ttl, agent_type=FundamentalistAgent, attr='cash'),
                 'Fundamentalists total assets': partial(get_type_attr_ttl, agent_type=FundamentalistAgent, attr='assets_quantity'),
@@ -92,19 +93,14 @@ class MarketModel(Model):
             }
         )
 
-        _agents_factory(self, NewsAgent, 1)
         _agents_factory(self, MarketMaker, 1)
+        _agents_factory(self, NewsAgent, 1)
         _agents_factory(self, FundamentalistAgent, fundamentalists_number, fundamentalists_config)
         _agents_factory(self, ChartistAgent, chartists_number, chartists_config)
 
         logger.info('Model initialized.')
         log_agents = {t.__name__: len(l) for t, l in self.agents_.items()}
         logger.debug(f'Agents: {log_agents}')
-
-    # @property
-    # def log_returns(self) -> np.array:
-    #     if len(self.prices) < 2: return np.array([0])
-    #     return np.log(np.array(self.prices)[1:] / np.array(self.prices)[:-1])
 
     @property
     def news_event_value(self):

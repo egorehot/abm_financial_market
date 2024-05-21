@@ -47,9 +47,9 @@ class MarketScheduler(BaseScheduler):
             self.__complete_transaction(transaction)
             self.model.completed_transactions += 1
 
-    def __mm_fill_order_book(self):
+    def __mm_step(self):
         for mm in self.model.get_agents_of_type(MarketMaker).shuffle():
-            mm.fill_order_book()
+            mm.step()
 
     def __generate_news_event(self):
         self.news_event_step = self.steps + np.ceil(RNG.exponential(1 / self._news_lambda))
@@ -71,13 +71,14 @@ class MarketScheduler(BaseScheduler):
 
         RNG.shuffle(traders)
         for trader in traders:
-            self.__mm_fill_order_book()
+            if not all([self.model.order_book.get_best_ask(), self.model.order_book.get_best_bid()]):
+                self.__mm_step()
             trader.step()
             self.__execute_order_book()
 
-        for mm in self.model.get_agents_of_type(MarketMaker).shuffle():
-            mm.step()
-            self.__execute_order_book()
+        self.__mm_step()
+        self.__execute_order_book()
+        self.model.prices.append(self.model.order_book.get_central_price())
 
         logger.debug(f'Step #{self.steps} finished.')
         self.steps += 1

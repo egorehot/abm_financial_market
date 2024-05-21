@@ -3,7 +3,7 @@ import numpy as np
 
 import config
 
-logger = config.get_logger(__name__, 10)
+logger = config.get_logger(__name__)
 
 logger.debug(f'Seed: {config.RANDOM_SEED}')
 RNG = np.random.default_rng(config.RANDOM_SEED)

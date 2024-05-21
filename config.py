@@ -1,6 +1,6 @@
 import logging
 
-RANDOM_SEED: int | None = 42
+RANDOM_SEED: int | None = 54318645006425820469352026106528529856  # None
 
 LOGGING_LEVEL = logging.INFO
 LOG_FORMAT = '%(name)s:%(levelname)s:%(message)s'

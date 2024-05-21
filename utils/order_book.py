@@ -62,19 +62,19 @@ class OrderBook:
 
     def place_order(self, agent_id: int, action: MarketAction, price: float, quantity: int):
         if quantity <= 0:
-            raise ValueError(f"Order quantity have to be > 0, got {str(quantity)}.")
+            raise ValueError(f"Agent: {agent_id}. Order quantity has to be > 0, got {str(quantity)}.")
         order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:
                 self._add_market(order)
             case MarketAction.BUY_LIMIT:
                 self._add_bid(order)
-                if agent_id == 1:
-                    self._mm_bid = True
+                # if agent_id == 1:
+                #     self._mm_bid = True
             case MarketAction.SELL_LIMIT:
                 self._add_ask(order)
-                if agent_id == 1:
-                    self._mm_ask = True
+                # if agent_id == 1:
+                #     self._mm_ask = True
             case MarketAction.ABSTAIN:
                 pass
             case _:
@@ -86,17 +86,17 @@ class OrderBook:
             case 'both':
                 self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
                 self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
-                if agent_id == 1:
-                    self._mm_bid = False
-                    self._mm_ask = False
+                # if agent_id == 1:
+                #     self._mm_bid = False
+                #     self._mm_ask = False
             case 'bid':
                 self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
-                if agent_id == 1:
-                    self._mm_bid = False
+                # if agent_id == 1:
+                #     self._mm_bid = False
             case 'ask':
                 self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
-                if agent_id == 1:
-                    self._mm_ask = False
+                # if agent_id == 1:
+                #     self._mm_ask = False
             case _:
                 raise ValueError(f'Wrong `side`. Expected both, ask or bid. Got {str(side)}.')
 

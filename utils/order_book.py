@@ -10,7 +10,7 @@ from utils.models import MarketAction, Transaction
 @dataclass
 class Order:
     agent_id: int | str
-    type: MarketAction
+    type_: MarketAction
     price: float
     quantity: int
     ts: float = field(default_factory=time.time)
@@ -21,8 +21,6 @@ class OrderBook:
         self.__bid: list[Order | None] = []
         self.__ask: list[Order | None] = []
         self.__market_orders: deque[Order | None] = deque([])
-        self._mm_bid: bool = False
-        self._mm_ask: bool = False
 
     def __len__(self):
         return len(self.__bid) + len(self.__ask)
@@ -63,18 +61,14 @@ class OrderBook:
     def place_order(self, agent_id: int, action: MarketAction, price: float, quantity: int):
         if quantity <= 0:
             raise ValueError(f"Agent: {agent_id}. Order quantity has to be > 0, got {str(quantity)}.")
-        order = Order(agent_id=agent_id, type=action, price=price, quantity=quantity)
+        order = Order(agent_id=agent_id, type_=action, price=price, quantity=quantity)
         match action:
             case MarketAction.BUY | MarketAction.SELL:
                 self._add_market(order)
             case MarketAction.BUY_LIMIT:
                 self._add_bid(order)
-                # if agent_id == 1:
-                #     self._mm_bid = True
             case MarketAction.SELL_LIMIT:
                 self._add_ask(order)
-                # if agent_id == 1:
-                #     self._mm_ask = True
             case MarketAction.ABSTAIN:
                 pass
             case _:
@@ -86,30 +80,23 @@ class OrderBook:
             case 'both':
                 self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
                 self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
-                # if agent_id == 1:
-                #     self._mm_bid = False
-                #     self._mm_ask = False
             case 'bid':
                 self.__bid = [order for order in self.__bid if order.agent_id != agent_id]
-                # if agent_id == 1:
-                #     self._mm_bid = False
             case 'ask':
                 self.__ask = [order for order in self.__ask if order.agent_id != agent_id]
-                # if agent_id == 1:
-                #     self._mm_ask = False
             case _:
                 raise ValueError(f'Wrong `side`. Expected both, ask or bid. Got {str(side)}.')
 
     @staticmethod
     def __make_transaction(order: Order, matched: Order) -> Transaction:
         trade_qty = min(order.quantity, matched.quantity)
-        if abs(order.type.value) == 1:
+        if abs(order.type_.value) == 1:
             trade_price = order.price if order.ts < matched.ts else matched.price
         else:
             trade_price = matched.price
         transaction = Transaction(
-            buyer_id=order.agent_id if order.type.value > 0 else matched.agent_id,
-            seller_id=matched.agent_id if matched.type.value < 0 else order.agent_id,
+            buyer_id=order.agent_id if order.type_.value > 0 else matched.agent_id,
+            seller_id=matched.agent_id if matched.type_.value < 0 else order.agent_id,
             price=trade_price,
             quantity=trade_qty,
         )
@@ -118,11 +105,11 @@ class OrderBook:
         return transaction
 
     def __execute_market_order(self, order: Order) -> list[Transaction | None]:
-        if not abs(order.type.value) == 2:
-            raise ValueError(f"Expected Order.type BUY or SELL, got {order.type}")
+        if not abs(order.type_.value) == 2:
+            raise ValueError(f"Expected Order.type BUY or SELL, got {order.type_}")
         transactions = []
 
-        opposite = self.__ask if order.type == MarketAction.BUY else self.__bid
+        opposite = self.__ask if order.type_ == MarketAction.BUY else self.__bid
         idx = 0
         while order.quantity > 0 and idx < len(opposite):
             best_match = opposite[idx]

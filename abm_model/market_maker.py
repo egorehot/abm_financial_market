@@ -85,27 +85,6 @@ class MarketMaker(MarketAgent):
         else:
             return int(self.assets_quantity // 2)
 
-    # def fill_order_book(self):
-    #     order_book: OrderBook = self.model.order_book
-    #     current_price = self.model.prices[-1] if not order_book.get_central_price() else order_book.get_central_price()
-    #
-    #     if len(order_book.bid) == 0 or not order_book._mm_bid:
-    #         spread = self._max_spread if self.assets_quantity > self._inventory_max else self._base_spread
-    #         order_price = round(current_price * (1 - spread / 2), self.model.tick_size)
-    #         order_qty = (self.cash * 0.7 // order_price) if self.cash * 0.7 > order_price else (self.cash // order_price)
-    #         order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, order_price, int(order_qty))
-    #
-    #     if len(order_book.ask) == 0 or not order_book._mm_ask:
-    #         # spread = self._base_spread if self.assets_quantity > self._inventory_min else self._max_spread
-    #         if self.assets_quantity <= self._inventory_min:
-    #             order_qty = max(self.assets_quantity // 3, 1)
-    #             spread = self._base_spread * 0.75
-    #         else:
-    #             order_qty = self.assets_quantity - self._inventory_min
-    #             spread = self._base_spread
-    #         order_price = round(current_price * (1 + spread / 2), self.model.tick_size)
-    #         order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, order_price, int(order_qty))
-
     def step(self):
         order_book: OrderBook = self.model.order_book
         order_book.cancel_limit_orders(self.unique_id)

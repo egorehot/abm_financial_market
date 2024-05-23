@@ -38,6 +38,18 @@ def get_type_attr_ttl(model: Model, agent_type: MarketAgent, attr: str):
     return round(sum(model.get_agents_of_type(agent_type).get(attr)), 2)
 
 
+def get_best_order(model: Model, side: str):
+    match side:
+        case 'bid':
+            best_bid = model.order_book.get_best_bid()
+            return best_bid.price if best_bid else 0
+        case 'ask':
+            best_ask = model.order_book.get_best_ask()
+            return best_ask.price if best_ask else 0
+        case _:
+            raise ValueError(f'Unexpected `side` {side}.')
+
+
 class MarketModel(Model):
     def __init__(
             self,
@@ -72,8 +84,8 @@ class MarketModel(Model):
                 'Price': lambda model: model.prices[-1],
                 'Transactions': 'completed_transactions',
                 'Volume': 'traded_qty',
-                'Best bid price': lambda model: model.order_book.get_best_bid().price,
-                'Best ask price': lambda model: model.order_book.get_best_ask().price,
+                'Best bid price': partial(get_best_order, side='bid'),
+                'Best ask price': partial(get_best_order, side='ask'),
                 'MM total wealth': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='wealth'),
                 'MM total cash': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='cash'),
                 'MM total assets': partial(get_type_attr_ttl, agent_type=MarketMaker, attr='assets_quantity'),

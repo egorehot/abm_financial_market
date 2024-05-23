@@ -1,7 +1,6 @@
 import math
 
 from mesa import Model
-import numpy as np
 
 import config
 from abm_model.market_agent import MarketAgent
@@ -12,7 +11,6 @@ logger = config.get_logger(__name__)
 
 
 logger.debug(f'Seed: {config.RANDOM_SEED}')
-# RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class ChartistAgent(MarketAgent):
@@ -90,16 +88,6 @@ class ChartistAgent(MarketAgent):
             if order_qty == 0 and free_cash >= current_price:
                 order_qty = 1
         return max(int(order_qty), 0)
-
-    # def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
-    #     """
-    #     f(x,lambda_limit,mu_spread) = lambda_limit * e**(-abs(lambda_limit * (x - mu_spread)))
-    #     mu_spread = 1/2 * (best_ask + best_bid)
-    #     """
-    #     cls = type(self)
-    #     order_book: OrderBook = self.model.order_book if not order_book else order_book
-    #     price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
-    #     return round(RNG.laplace(price, 1 / cls.lambda_limit), self.model.tick_size)
 
     def update_open_pos_price(self, action: str, price: float, quantity: int):
         match action:

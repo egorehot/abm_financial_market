@@ -17,7 +17,7 @@ class MarketAgent(Agent):
 
     def __init__(self, unique_id: int, model: Model, cash: float, assets_quantity: int):
         super().__init__(unique_id=unique_id, model=model)
-        self._cash = float(cash)
+        self._cash = round(float(cash), 4)
         self._assets_quantity = int(assets_quantity) if assets_quantity else 0
         self._cash_reserved = 0
 
@@ -47,7 +47,7 @@ class MarketAgent(Agent):
 
     @property
     def wealth(self):
-        return self._cash + self.model.prices[-1] * self._assets_quantity
+        return round(self._cash + self.model.prices[-1] * self._assets_quantity, 4)
 
     @property
     def bankrupt(self):

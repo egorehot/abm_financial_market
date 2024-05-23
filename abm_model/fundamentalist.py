@@ -1,5 +1,4 @@
 from mesa import Model
-import numpy as np
 
 import config
 from abm_model.market_agent import MarketAgent
@@ -8,7 +7,6 @@ from utils.order_book import MarketAction, OrderBook
 logger = config.get_logger(__name__)
 
 logger.debug(f'Seed: {config.RANDOM_SEED}')
-# RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class FundamentalistAgent(MarketAgent):
@@ -65,16 +63,6 @@ class FundamentalistAgent(MarketAgent):
                 price = market_price * (1 - self._chi_opinion)
             logger.debug(f'Adjusted fundamental price {price}.')
         return float(price)
-
-    # def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
-    #     """
-    #     f(x,lambda_limit,mu_spread) = lambda_limit * e**(-abs(lambda_limit * (x - mu_spread)))
-    #     mu_spread = 1/2 * (best_ask + best_bid)
-    #     """
-    #     cls = type(self)
-    #     order_book: OrderBook = self.model.order_book if not order_book else order_book
-    #     price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
-    #     return round(RNG.laplace(price, 1 / cls.lambda_limit), self.model.tick_size)
 
     def _calc_order_quantity(self, intention: MarketAction, price: float | None = None) -> int:
         current_price = price if price else self.model.order_book.get_central_price()

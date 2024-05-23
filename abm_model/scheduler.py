@@ -78,7 +78,7 @@ class MarketScheduler(BaseScheduler):
 
         self.__mm_step()
         self.__execute_order_book()
-        self.model.prices.append(self.model.order_book.get_central_price())
+        self.model.prices.append(round(self.model.order_book.get_central_price(), 4))
 
         logger.debug(f'Step #{self.steps} finished.')
         self.steps += 1

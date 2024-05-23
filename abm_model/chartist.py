@@ -12,7 +12,7 @@ logger = config.get_logger(__name__)
 
 
 logger.debug(f'Seed: {config.RANDOM_SEED}')
-RNG = np.random.default_rng(config.RANDOM_SEED)
+# RNG = np.random.default_rng(config.RANDOM_SEED)
 
 
 class ChartistAgent(MarketAgent):
@@ -28,16 +28,16 @@ class ChartistAgent(MarketAgent):
     majority_importance: float = -1.
     price_trend_importance: float = -2.5
     order_amount_range: list[float] = [0.03, 0.17]
-    lambda_limit: float = 3.5
+    # lambda_limit: float = 3.5
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
-        cash = RNG.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
+        cash = cls.RNG.lognormal(*cls.cash_distr) * cls.cash_scale if not cash else cash
         super().__init__(unique_id=unique_id, model=model, cash=cash, assets_quantity=assets_quantity)
-        self.__is_optimistic = RNG.choice([True, False], p=[cls.optimistic_ratio, 1 - cls.optimistic_ratio])
-        self.take_profit = RNG.uniform(*cls.take_profit_range)
+        self.__is_optimistic = cls.RNG.choice([True, False], p=[cls.optimistic_ratio, 1 - cls.optimistic_ratio])
+        self.take_profit = cls.RNG.uniform(*cls.take_profit_range)
         self.__avg_opened_price = 0
-        self.__order_amount_perc = RNG.uniform(*cls.order_amount_range)
+        self.__order_amount_perc = cls.RNG.uniform(*cls.order_amount_range)
 
         self.model._optimistic_chartists_number += int(self.__is_optimistic)
 
@@ -68,12 +68,14 @@ class ChartistAgent(MarketAgent):
     def __evaluate_opinion(self):
         cls = type(self)
         chartists_number = len(self.model.get_agents_of_type(cls))
+        number_agents = len(self.model.agents) - 2  # -MarketMaker, -News
         change_proba = (cls.revaluation_freq * chartists_number /
-                        len(self.model.agents) * math.e**(self.__majority_opinion() * (1 if self.is_optimistic else -1)))
+                        number_agents * math.e**(self.__majority_opinion() * (1 if self.is_optimistic else -1)))
         change_proba = min(change_proba, 1.)
         logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. "
                      f"Optimist: {self.is_optimistic}. Change proba: {round(change_proba, 4)}.")
-        self.is_optimistic = RNG.choice([self.is_optimistic, not self.is_optimistic], p=[1 - change_proba, change_proba])
+        self.is_optimistic = cls.RNG.choice([self.is_optimistic, not self.is_optimistic],
+                                            p=[1 - change_proba, change_proba])
 
     def _calc_order_quantity(self, price: float | None = None) -> int:
         current_price = price if price else self.model.order_book.get_central_price()
@@ -89,15 +91,15 @@ class ChartistAgent(MarketAgent):
                 order_qty = 1
         return max(int(order_qty), 0)
 
-    def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
-        """
-        f(x,lambda_limit,mu_spread) = lambda_limit * e**(-abs(lambda_limit * (x - mu_spread)))
-        mu_spread = 1/2 * (best_ask + best_bid)
-        """
-        cls = type(self)
-        order_book: OrderBook = self.model.order_book if not order_book else order_book
-        price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
-        return round(RNG.laplace(price, 1 / cls.lambda_limit), self.model.tick_size)
+    # def _calc_limit_price(self, order_book: OrderBook | None = None) -> float:
+    #     """
+    #     f(x,lambda_limit,mu_spread) = lambda_limit * e**(-abs(lambda_limit * (x - mu_spread)))
+    #     mu_spread = 1/2 * (best_ask + best_bid)
+    #     """
+    #     cls = type(self)
+    #     order_book: OrderBook = self.model.order_book if not order_book else order_book
+    #     price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
+    #     return round(RNG.laplace(price, 1 / cls.lambda_limit), self.model.tick_size)
 
     def update_open_pos_price(self, action: str, price: float, quantity: int):
         match action:

@@ -1,9 +1,8 @@
-import math
-
 from mesa import Model
 
 from config import get_logger
 from abm_model.market_agent import MarketAgent
+from abm_model.utils import round_to_tick
 from utils.models import MarketAction
 from utils.order_book import OrderBook
 
@@ -122,10 +121,11 @@ class MarketMaker(MarketAgent):
             market_qty = max(self._inventory_min * 0.1 - self.assets_quantity, best_ask.quantity)
             order_book.place_order(self.unique_id, MarketAction.BUY, best_ask.price, market_qty)
 
-        buy_price = round(current_price * (1 - self.spread / 2) * self.news_price_coeff, self.model.tick_size)
+        buy_price = round_to_tick(current_price * (1 - self.spread / 2) * self.news_price_coeff, self.model.tick_size)
         buy_qty = self.buy_amount // buy_price if self.buy_amount > buy_price else self.cash // buy_price
         order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, buy_price, int(buy_qty))
 
         if self.sell_quantity > 0:
-            sell_price = round(current_price * (1 + self.spread / 2) * self.news_price_coeff, self.model.tick_size)
+            sell_price = round_to_tick(current_price * (1 + self.spread / 2) * self.news_price_coeff,
+                                       self.model.tick_size)
             order_book.place_order(self.unique_id, MarketAction.SELL_LIMIT, sell_price, self.sell_quantity)

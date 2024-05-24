@@ -23,10 +23,9 @@ class ChartistAgent(MarketAgent):
     optimistic_ratio: float = 0.51
     take_profit_range: list[float] = [0.01, 0.1]
     revaluation_freq: float = 0.5
-    majority_importance: float = -1.
-    price_trend_importance: float = -2.5
-    order_amount_range: list[float] = [0.03, 0.17]
-    # lambda_limit: float = 3.5
+    majority_importance: float = -0.5
+    price_trend_importance: float = -10.
+    order_amount_range: list[float] = [0.01, 0.15]
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
@@ -58,7 +57,7 @@ class ChartistAgent(MarketAgent):
         optimists_number = self.model._optimistic_chartists_number
         pessimists_number = chartists_number - optimists_number
         majority = (optimists_number - pessimists_number) / chartists_number
-        price_trend = ((self.model.prices[-1] - self.model.prices[-2]) / self.model.prices[-2]) if len(self.model.prices) > 1 else 0.001
+        price_trend = ((self.model.prices[-1] - self.model.prices[-2]) / self.model.prices[-2]) if len(self.model.prices) > 1 else 0.0001
         logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. "
                      f"Majority: {round(majority, 3)}. Price trend: {round(price_trend, 3)}.")
         return cls.majority_importance * majority + cls.price_trend_importance * price_trend / cls.revaluation_freq
@@ -66,9 +65,10 @@ class ChartistAgent(MarketAgent):
     def __evaluate_opinion(self):
         cls = type(self)
         chartists_number = len(self.model.get_agents_of_type(cls))
-        number_agents = len(self.model.agents) - 2  # -MarketMaker, -News
-        change_proba = (cls.revaluation_freq * chartists_number /
-                        number_agents * math.e**(self.__majority_opinion() * (1 if self.is_optimistic else -1)))
+        agents_number = len(self.model.agents) - 2  # -MarketMaker, -News
+        change_proba = cls.revaluation_freq * (chartists_number / agents_number) * math.exp(
+            self.__majority_opinion() * (1 if self.is_optimistic else -1)
+        )
         change_proba = min(change_proba, 1.)
         logger.debug(f"Step: {self.model.schedule.steps}. Agent: {self.unique_id}. "
                      f"Optimist: {self.is_optimistic}. Change proba: {round(change_proba, 4)}.")

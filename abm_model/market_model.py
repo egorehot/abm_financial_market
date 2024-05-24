@@ -75,7 +75,7 @@ class MarketModel(Model):
         self._optimistic_chartists_number = 0
         self.completed_transactions = 0
         self.traded_qty = 0
-        self.tick_size = tick_size
+        self.tick_size = float(tick_size)
         self._news_event_value: float = 0.
         self.news_event_occurred = False
 
@@ -112,14 +112,14 @@ class MarketModel(Model):
             }
         )
 
+        logger.debug(f"MarketAgent seed: {MarketAgent.RNG._bit_generator.seed_seq.entropy}")
         _agents_factory(self, MarketMaker, 1)
         _agents_factory(self, NewsAgent, 1)
         _agents_factory(self, FundamentalistAgent, fundamentalists_number, fundamentalists_config)
         _agents_factory(self, ChartistAgent, chartists_number, chartists_config)
 
-        logger.info('Model initialized.')
         log_agents = {t.__name__: len(l) for t, l in self.agents_.items()}
-        logger.debug(f'Agents: {log_agents}')
+        logger.info(f'Model initialized. Agents: {log_agents}')
 
     @property
     def news_event_value(self):

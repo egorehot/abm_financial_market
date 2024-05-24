@@ -6,8 +6,6 @@ from utils.order_book import MarketAction, OrderBook
 
 logger = config.get_logger(__name__)
 
-logger.debug(f'Seed: {config.RANDOM_SEED}')
-
 
 class FundamentalistAgent(MarketAgent):
     """
@@ -16,12 +14,11 @@ class FundamentalistAgent(MarketAgent):
     """
     cash_distr: list[float] = [1., 0.4]
     cash_scale: float = 1000.
-    # lambda_limit: float = 3.5
-    chi_market_range: list[float] = [0.01, 0.15]
+    chi_market_range: list[float] = [0.02, 0.15]
     chi_opinion_range: list[float] = [0.03, 0.1]
     fundamental_price_spread: float = 0.03
     fundamental_price_variance: float = 0.2
-    order_amount_range: list[float] = [0.05, 0.10]
+    order_amount_range: list[float] = [0.025, 0.10]
 
     def __init__(self, unique_id: int, model: Model, cash: float | None = None, assets_quantity: int | None = None):
         cls = type(self)
@@ -37,7 +34,7 @@ class FundamentalistAgent(MarketAgent):
 
     def _calc_fundamental_price(self) -> float:
         """
-        ln(p_t) - ln(p_{t-1}) = eps, where eps ~ N(0, eps_variance)
+        p_ft = p_{f(t-1)} + eps, where eps ~ N(news_event, fundamental_price_variance)
         """
         if self.model.news_event_occurred:
             cls = type(self)
@@ -87,24 +84,26 @@ class FundamentalistAgent(MarketAgent):
         order_book: OrderBook = self.model.order_book
         best_ask = order_book.get_best_ask()
         best_bid = order_book.get_best_bid()
-        if fundamental_price > best_ask.price * (1 + self._chi_market):
+        if best_ask and fundamental_price > best_ask.price * (1 + self._chi_market):
             return MarketAction.BUY
-        elif best_ask.price < fundamental_price <= best_ask.price * (1 + self._chi_market):
+        elif best_ask and best_ask.price < fundamental_price <= best_ask.price * (1 + self._chi_market):
             return MarketAction.BUY_LIMIT
-        elif fundamental_price < best_bid.price * (1 - self._chi_market):
+        elif best_bid and fundamental_price < best_bid.price * (1 - self._chi_market):
             return MarketAction.SELL
-        elif best_bid.price * (1 - self._chi_market) <= fundamental_price < best_bid.price:
+        elif best_bid and best_bid.price * (1 - self._chi_market) <= fundamental_price < best_bid.price:
             return MarketAction.SELL_LIMIT
         else:
             return MarketAction.ABSTAIN
 
     def step(self):
-        if self.bankrupt: return
+        order_book: OrderBook = self.model.order_book
+        if self.bankrupt:
+            order_book.cancel_limit_orders(self.unique_id)
+            return
 
         fundamental_price = self._calc_fundamental_price()
-        order_book: OrderBook = self.model.order_book
-
-        cancel_side = 'ask' if fundamental_price > order_book.get_central_price() else 'bid'
+        current_price = order_book.get_central_price() if order_book.get_central_price() else self.model.prices[-1]
+        cancel_side = 'ask' if fundamental_price > current_price else 'bid'
         order_book.cancel_limit_orders(self.unique_id, cancel_side)
 
         intention = self._intention()

@@ -8,18 +8,25 @@ from utils.order_book import OrderBook
 
 logger = config.get_logger(__name__)
 
-logger.debug(f'Seed: {config.RANDOM_SEED}')
-
 
 class MarketAgent(Agent):
     RNG = np.random.default_rng(config.RANDOM_SEED)
     lambda_limit: float = 3.5
+
+    @classmethod
+    def update_rng(cls, seed: int | None = None):
+        cls.RNG = np.random.default_rng(seed if seed else config.RANDOM_SEED)
 
     def __init__(self, unique_id: int, model: Model, cash: float, assets_quantity: int):
         super().__init__(unique_id=unique_id, model=model)
         self._cash = round(float(cash), 4)
         self._assets_quantity = int(assets_quantity) if assets_quantity else 0
         self._cash_reserved = 0
+
+    def __str__(self):
+        cls = type(self).__name__
+        return (f'{cls}(id={self.unique_id}, wealth={self.wealth}, cash={self._cash}, '
+                f'assets_quantity={self._assets_quantity})')
 
     @property
     def cash(self):

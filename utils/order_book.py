@@ -25,6 +25,15 @@ class OrderBook:
     def __len__(self):
         return len(self.__bid) + len(self.__ask)
 
+    def __str__(self):
+        cls = type(self).__name__
+        return (f'{cls}(\n'
+                f'\tTotal length: {len(self)}\n'
+                f'\tMarket orders: {self.__market_orders}\n'
+                f'\tBid: {repr(self.__bid)}\n'
+                f'\tAsk: {repr(self.__ask)}\n'
+                f')')
+
     @property
     def bid(self):
         return self.__bid

@@ -102,7 +102,8 @@ class MarketMaker(MarketAgent):
 
         buy_price = round_to_tick(current_price * (1 - self.spread / 2) * self.news_price_coeff, self.model.tick_size)
         buy_qty = self.buy_amount // buy_price if self.buy_amount > buy_price else self.cash // buy_price
-        order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, buy_price, int(buy_qty))
+        if buy_qty > 0:
+            order_book.place_order(self.unique_id, MarketAction.BUY_LIMIT, buy_price, int(buy_qty))
 
         if self.sell_quantity > 0:
             sell_price = round_to_tick(current_price * (1 + self.spread / 2) * self.news_price_coeff,

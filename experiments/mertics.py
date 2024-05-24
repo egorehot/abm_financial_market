@@ -20,10 +20,10 @@ def calc_series_metrics(series, metric: str = 'avg'):
 
 def calculate_metrics(model_df, absolute: bool = False):
     return {
-        'Spread': calc_spread(model_df, absolute=absolute),
-        'Price std': calc_price_std(model_df['Price'], absolute=absolute),
-        'Transactions mean': calc_series_metrics(model_df['Transactions'], metric='avg'),
-        'Transactions sum': int(calc_series_metrics(model_df['Transactions'], metric='sum')),
-        'Volume mean': calc_series_metrics(model_df['Volume'], metric='avg'),
-        'Volume sum': int(calc_series_metrics(model_df['Volume'], metric='sum')),
+        'spread': calc_spread(model_df, absolute=absolute),
+        'price_std': calc_price_std(model_df['Price'], absolute=absolute),
+        'transactions_mean': calc_series_metrics(model_df['Transactions'], metric='avg'),
+        'transactions_sum': int(calc_series_metrics(model_df['Transactions'], metric='sum')),
+        'volume_mean': calc_series_metrics(model_df['Volume'], metric='avg'),
+        'volume_sum': int(calc_series_metrics(model_df['Volume'], metric='sum')),
     }
